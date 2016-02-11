@@ -3,17 +3,15 @@ package mcnutils
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"runtime"
 	"strconv"
 	"time"
-
-	"github.com/docker/machine/libmachine/log"
 )
 
+// GetHomeDir returns the home directory
 // TODO: Having this here just strikes me as dangerous, but some of the drivers
 // depend on it ;_;
 func GetHomeDir() string {
@@ -53,6 +51,8 @@ func CopyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
+
+	defer out.Close()
 
 	if _, err = io.Copy(out, in); err != nil {
 		return err
@@ -94,16 +94,7 @@ func WaitFor(f func() bool) error {
 	return WaitForSpecific(f, 60, 3*time.Second)
 }
 
-func DumpVal(vals ...interface{}) {
-	for _, val := range vals {
-		prettyJSON, err := json.MarshalIndent(val, "", "    ")
-		if err != nil {
-			log.Warn(err)
-		}
-		log.Debug(string(prettyJSON))
-	}
-}
-
+// TruncateID returns a shorten id
 // Following two functions are from github.com/docker/docker/utils module. It
 // was way overkill to include the whole module, so we just have these bits
 // that we're using here.

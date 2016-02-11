@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os"
 	"testing"
 	"time"
 
+	"os"
+
 	"github.com/docker/machine/libmachine/log"
+	"github.com/stretchr/testify/assert"
 )
 
 type FakeExecutor struct {
@@ -26,7 +28,7 @@ func (fe *FakeExecutor) Close() error {
 }
 
 func TestLocalBinaryPluginAddress(t *testing.T) {
-	lbp := &LocalBinaryPlugin{}
+	lbp := &Plugin{}
 	expectedAddr := "127.0.0.1:12345"
 
 	lbp.addrCh = make(chan string, 1)
@@ -55,19 +57,20 @@ func TestLocalBinaryPluginAddressTimeout(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping timeout test")
 	}
-	lbp := &LocalBinaryPlugin{}
-	lbp.addrCh = make(chan string, 1)
-	go func() {
-		_, err := lbp.Address()
-		if err == nil {
-			t.Fatalf("Expected to get a timeout error, instead got %s", err)
-		}
-	}()
-	time.Sleep(defaultTimeout + 1)
+
+	lbp := &Plugin{
+		addrCh:  make(chan string, 1),
+		timeout: 1 * time.Second,
+	}
+
+	addr, err := lbp.Address()
+
+	assert.Empty(t, addr)
+	assert.EqualError(t, err, "Failed to dial the plugin server in 1s")
 }
 
 func TestLocalBinaryPluginClose(t *testing.T) {
-	lbp := &LocalBinaryPlugin{}
+	lbp := &Plugin{}
 	lbp.stopCh = make(chan bool, 1)
 	go lbp.Close()
 	stopped := <-lbp.stopCh
@@ -77,16 +80,15 @@ func TestLocalBinaryPluginClose(t *testing.T) {
 }
 
 func TestExecServer(t *testing.T) {
-	log.IsDebug = true
-	machineName := "test"
+	logOutReader, logOutWriter := io.Pipe()
+	logErrReader, logErrWriter := io.Pipe()
 
-	logReader, logWriter := io.Pipe()
-
-	log.SetOutWriter(logWriter)
-	log.SetErrWriter(logWriter)
+	log.SetDebug(true)
+	log.SetOutWriter(logOutWriter)
+	log.SetErrWriter(logErrWriter)
 
 	defer func() {
-		log.IsDebug = false
+		log.SetDebug(false)
 		log.SetOutWriter(os.Stdout)
 		log.SetErrWriter(os.Stderr)
 	}()
@@ -99,7 +101,8 @@ func TestExecServer(t *testing.T) {
 		stderr: stderrReader,
 	}
 
-	lbp := &LocalBinaryPlugin{
+	machineName := "test"
+	lbp := &Plugin{
 		MachineName: machineName,
 		Executor:    fe,
 		addrCh:      make(chan string, 1),
@@ -113,12 +116,11 @@ func TestExecServer(t *testing.T) {
 		finalErr <- lbp.execServer()
 	}()
 
+	logOutScanner := bufio.NewScanner(logOutReader)
+	logErrScanner := bufio.NewScanner(logErrReader)
+
+	// Write the ip address
 	expectedAddr := "127.0.0.1:12345"
-	expectedPluginOut := "Doing some fun plugin stuff..."
-	expectedPluginErr := "Uh oh, something in plugin went wrong..."
-
-	logScanner := bufio.NewScanner(logReader)
-
 	if _, err := io.WriteString(stdoutWriter, expectedAddr+"\n"); err != nil {
 		t.Fatalf("Error attempting to write plugin address: %s", err)
 	}
@@ -127,24 +129,26 @@ func TestExecServer(t *testing.T) {
 		t.Fatalf("Expected to read the expected address properly in server but did not")
 	}
 
-	expectedOut := fmt.Sprintf("%s%s", fmt.Sprintf(pluginOutPrefix, machineName), expectedPluginOut)
-
+	// Write a log in stdout
+	expectedPluginOut := "Doing some fun plugin stuff..."
 	if _, err := io.WriteString(stdoutWriter, expectedPluginOut+"\n"); err != nil {
 		t.Fatalf("Error attempting to write to out in plugin: %s", err)
 	}
 
-	if logScanner.Scan(); logScanner.Text() != expectedOut {
-		t.Fatalf("Output written to log was not what we expected\nexpected: %s\nactual:   %s", expectedOut, logScanner.Text())
+	expectedOut := fmt.Sprintf(pluginOut, machineName, expectedPluginOut)
+	if logOutScanner.Scan(); logOutScanner.Text() != expectedOut {
+		t.Fatalf("Output written to log was not what we expected\nexpected: %s\nactual:   %s", expectedOut, logOutScanner.Text())
 	}
 
-	expectedErr := fmt.Sprintf("%s%s", fmt.Sprintf(pluginErrPrefix, machineName), expectedPluginErr)
-
+	// Write a log in stderr
+	expectedPluginErr := "Uh oh, something in plugin went wrong..."
 	if _, err := io.WriteString(stderrWriter, expectedPluginErr+"\n"); err != nil {
 		t.Fatalf("Error attempting to write to err in plugin: %s", err)
 	}
 
-	if logScanner.Scan(); logScanner.Text() != expectedErr {
-		t.Fatalf("Error written to log was not what we expected\nexpected: %s\nactual:   %s", expectedErr, logScanner.Text())
+	expectedErr := fmt.Sprintf(pluginErr, machineName, expectedPluginErr)
+	if logErrScanner.Scan(); logErrScanner.Text() != expectedErr {
+		t.Fatalf("Error written to log was not what we expected\nexpected: %s\nactual:   %s", expectedErr, logErrScanner.Text())
 	}
 
 	lbp.Close()

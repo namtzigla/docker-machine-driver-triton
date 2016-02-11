@@ -6,8 +6,7 @@ import (
 )
 
 var (
-	ErrInvalidHostname     = errors.New("Invalid hostname specified. Allowed hostname chars are: 0-9a-zA-Z . -")
-	ErrUnknownProviderType = errors.New("Unknown hypervisor type")
+	ErrInvalidHostname = errors.New("Invalid hostname specified. Allowed hostname chars are: 0-9a-zA-Z . -")
 )
 
 type ErrHostDoesNotExist struct {
@@ -24,4 +23,12 @@ type ErrHostAlreadyExists struct {
 
 func (e ErrHostAlreadyExists) Error() string {
 	return fmt.Sprintf("Host already exists: %q", e.Name)
+}
+
+type ErrDuringPreCreate struct {
+	Cause error
+}
+
+func (e ErrDuringPreCreate) Error() string {
+	return fmt.Sprintf("Error with pre-create check: %q", e.Cause)
 }

@@ -8,6 +8,12 @@ import (
 
 	"github.com/docker/machine/drivers/fakedriver"
 	"github.com/docker/machine/libmachine/auth"
+	"github.com/docker/machine/libmachine/engine"
+	"github.com/docker/machine/libmachine/provision/pkgaction"
+	"github.com/docker/machine/libmachine/provision/provisiontest"
+	"github.com/docker/machine/libmachine/provision/serviceaction"
+	"github.com/docker/machine/libmachine/swarm"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -59,7 +65,7 @@ func TestGenerateDockerOptionsBoot2Docker(t *testing.T) {
 		Driver: &fakedriver.Driver{},
 	}
 	dockerPort := 1234
-	p.AuthOptions = auth.AuthOptions{
+	p.AuthOptions = auth.Options{
 		CaCertRemotePath:     "/test/ca-cert",
 		ServerKeyRemotePath:  "/test/server-key",
 		ServerCertRemotePath: "/test/server-cert",
@@ -96,9 +102,9 @@ func TestMachinePortBoot2Docker(t *testing.T) {
 	p := &Boot2DockerProvisioner{
 		Driver: &fakedriver.Driver{},
 	}
-	dockerPort := 2376
-	bindUrl := fmt.Sprintf("tcp://0.0.0.0:%d", dockerPort)
-	p.AuthOptions = auth.AuthOptions{
+	dockerPort := engine.DefaultPort
+	bindURL := fmt.Sprintf("tcp://0.0.0.0:%d", dockerPort)
+	p.AuthOptions = auth.Options{
 		CaCertRemotePath:     "/test/ca-cert",
 		ServerKeyRemotePath:  "/test/server-key",
 		ServerCertRemotePath: "/test/server-cert",
@@ -119,8 +125,8 @@ func TestMachinePortBoot2Docker(t *testing.T) {
 	url := u[1]
 	url = strings.Replace(url, "'", "", -1)
 	url = strings.Replace(url, "\\\"", "", -1)
-	if url != bindUrl {
-		t.Errorf("expected url %s; received %s", bindUrl, url)
+	if url != bindURL {
+		t.Errorf("expected url %s; received %s", bindURL, url)
 	}
 }
 
@@ -129,8 +135,8 @@ func TestMachineCustomPortBoot2Docker(t *testing.T) {
 		Driver: &fakedriver.Driver{},
 	}
 	dockerPort := 3376
-	bindUrl := fmt.Sprintf("tcp://0.0.0.0:%d", dockerPort)
-	p.AuthOptions = auth.AuthOptions{
+	bindURL := fmt.Sprintf("tcp://0.0.0.0:%d", dockerPort)
+	p.AuthOptions = auth.Options{
 		CaCertRemotePath:     "/test/ca-cert",
 		ServerKeyRemotePath:  "/test/server-key",
 		ServerCertRemotePath: "/test/server-cert",
@@ -152,7 +158,70 @@ func TestMachineCustomPortBoot2Docker(t *testing.T) {
 	url := u[1]
 	url = strings.Replace(url, "'", "", -1)
 	url = strings.Replace(url, "\\\"", "", -1)
-	if url != bindUrl {
-		t.Errorf("expected url %s; received %s", bindUrl, url)
+	if url != bindURL {
+		t.Errorf("expected url %s; received %s", bindURL, url)
 	}
+}
+
+type fakeProvisioner struct {
+	GenericProvisioner
+}
+
+func (provisioner *fakeProvisioner) Package(name string, action pkgaction.PackageAction) error {
+	return nil
+}
+
+func (provisioner *fakeProvisioner) Provision(swarmOptions swarm.Options, authOptions auth.Options, engineOptions engine.Options) error {
+	return nil
+}
+
+func (provisioner *fakeProvisioner) Service(name string, action serviceaction.ServiceAction) error {
+	return nil
+}
+
+func (provisioner *fakeProvisioner) String() string {
+	return "fake"
+}
+
+func TestDecideStorageDriver(t *testing.T) {
+	var tests = []struct {
+		suppliedDriver       string
+		defaultDriver        string
+		remoteFilesystemType string
+		expectedDriver       string
+	}{
+		{"", "aufs", "ext4", "aufs"},
+		{"", "aufs", "btrfs", "btrfs"},
+		{"", "overlay", "btrfs", "overlay"},
+		{"devicemapper", "aufs", "ext4", "devicemapper"},
+		{"devicemapper", "aufs", "btrfs", "devicemapper"},
+	}
+
+	p := &fakeProvisioner{GenericProvisioner{
+		Driver: &fakedriver.Driver{},
+	}}
+	for _, test := range tests {
+		p.SSHCommander = provisiontest.NewFakeSSHCommander(
+			provisiontest.FakeSSHCommanderOptions{
+				FilesystemType: test.remoteFilesystemType,
+			},
+		)
+		storageDriver, err := decideStorageDriver(p, test.defaultDriver, test.suppliedDriver)
+		assert.NoError(t, err)
+		assert.Equal(t, test.expectedDriver, storageDriver)
+	}
+}
+
+func TestGetFilesystemType(t *testing.T) {
+	p := &fakeProvisioner{GenericProvisioner{
+		Driver: &fakedriver.Driver{},
+	}}
+	p.SSHCommander = &provisiontest.FakeSSHCommander{
+		Responses: map[string]string{
+			"stat -f -c %T /var/lib": "btrfs\n",
+		},
+	}
+	fsType, err := getFilesystemType(p, "/var/lib")
+	assert.NoError(t, err)
+	assert.Equal(t, "btrfs", fsType)
 }

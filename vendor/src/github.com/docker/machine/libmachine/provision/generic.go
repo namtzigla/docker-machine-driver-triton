@@ -12,15 +12,24 @@ import (
 )
 
 type GenericProvisioner struct {
-	OsReleaseId       string
+	SSHCommander
+	OsReleaseID       string
 	DockerOptionsDir  string
 	DaemonOptionsFile string
 	Packages          []string
 	OsReleaseInfo     *OsRelease
 	Driver            drivers.Driver
-	AuthOptions       auth.AuthOptions
-	EngineOptions     engine.EngineOptions
-	SwarmOptions      swarm.SwarmOptions
+	AuthOptions       auth.Options
+	EngineOptions     engine.Options
+	SwarmOptions      swarm.Options
+}
+
+type GenericSSHCommander struct {
+	Driver drivers.Driver
+}
+
+func (sshCmder GenericSSHCommander) SSHCommand(args string) (string, error) {
+	return drivers.RunSSHCommandFromDriver(sshCmder.Driver, args)
 }
 
 func (provisioner *GenericProvisioner) Hostname() (string, error) {
@@ -37,8 +46,15 @@ func (provisioner *GenericProvisioner) SetHostname(hostname string) error {
 	}
 
 	// ubuntu/debian use 127.0.1.1 for non "localhost" loopback hostnames: https://www.debian.org/doc/manuals/debian-reference/ch05.en.html#_the_hostname_resolution
-	if _, err := provisioner.SSHCommand(fmt.Sprintf(
-		"if grep -xq 127.0.1.1.* /etc/hosts; then sudo sed -i 's/^127.0.1.1.*/127.0.1.1 %s/g' /etc/hosts; else echo '127.0.1.1 %s' | sudo tee -a /etc/hosts; fi",
+	if _, err := provisioner.SSHCommand(fmt.Sprintf(`
+		if ! grep -xq .*%s /etc/hosts; then
+			if grep -xq 127.0.1.1.* /etc/hosts; then 
+				sudo sed -i 's/^127.0.1.1.*/127.0.1.1 %s/g' /etc/hosts; 
+			else 
+				echo '127.0.1.1 %s' | sudo tee -a /etc/hosts; 
+			fi
+		fi`,
+		hostname,
 		hostname,
 		hostname,
 	)); err != nil {
@@ -52,15 +68,11 @@ func (provisioner *GenericProvisioner) GetDockerOptionsDir() string {
 	return provisioner.DockerOptionsDir
 }
 
-func (provisioner *GenericProvisioner) SSHCommand(args string) (string, error) {
-	return drivers.RunSSHCommandFromDriver(provisioner.Driver, args)
-}
-
 func (provisioner *GenericProvisioner) CompatibleWithHost() bool {
-	return provisioner.OsReleaseInfo.Id == provisioner.OsReleaseId
+	return provisioner.OsReleaseInfo.ID == provisioner.OsReleaseID
 }
 
-func (provisioner *GenericProvisioner) GetAuthOptions() auth.AuthOptions {
+func (provisioner *GenericProvisioner) GetAuthOptions() auth.Options {
 	return provisioner.AuthOptions
 }
 

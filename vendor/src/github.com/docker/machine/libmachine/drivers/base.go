@@ -2,14 +2,13 @@ package drivers
 
 import (
 	"errors"
-	"fmt"
-	"net"
 	"path/filepath"
 )
 
 const (
-	DefaultSSHUser = "root"
-	DefaultSSHPort = 22
+	DefaultSSHUser          = "root"
+	DefaultSSHPort          = 22
+	DefaultEngineInstallURL = "https://get.docker.com"
 )
 
 // BaseDriver - Embed this struct into drivers to provide the common set
@@ -17,9 +16,9 @@ const (
 type BaseDriver struct {
 	IPAddress      string
 	MachineName    string
-	SSHKeyPath     string
-	SSHPort        int
 	SSHUser        string
+	SSHPort        int
+	SSHKeyPath     string
 	StorePath      string
 	SwarmMaster    bool
 	SwarmHost      string
@@ -31,26 +30,17 @@ func (d *BaseDriver) DriverName() string {
 	return "unknown"
 }
 
-// GetIP returns the ip
-func (d *BaseDriver) GetIP() (string, error) {
-	if d.IPAddress == "" {
-		return "", errors.New("IP address is not set")
-	}
-	ip := net.ParseIP(d.IPAddress)
-	if ip == nil {
-		return "", fmt.Errorf("IP address is invalid: %s", d.IPAddress)
-	}
-	return d.IPAddress, nil
-}
-
 // GetMachineName returns the machine name
 func (d *BaseDriver) GetMachineName() string {
 	return d.MachineName
 }
 
-// GetSSHHostname returns hostname for use with ssh
-func (d *BaseDriver) GetSSHHostname() (string, error) {
-	return d.GetIP()
+// GetIP returns the ip
+func (d *BaseDriver) GetIP() (string, error) {
+	if d.IPAddress == "" {
+		return "", errors.New("IP address is not set")
+	}
+	return d.IPAddress, nil
 }
 
 // GetSSHKeyPath returns the ssh key path
@@ -75,7 +65,6 @@ func (d *BaseDriver) GetSSHUsername() string {
 	if d.SSHUser == "" {
 		d.SSHUser = DefaultSSHUser
 	}
-
 	return d.SSHUser
 }
 
@@ -87,4 +76,16 @@ func (d *BaseDriver) PreCreateCheck() error {
 // ResolveStorePath returns the store path where the machine is
 func (d *BaseDriver) ResolveStorePath(file string) string {
 	return filepath.Join(d.StorePath, "machines", d.MachineName, file)
+}
+
+// SetSwarmConfigFromFlags configures the driver for swarm
+func (d *BaseDriver) SetSwarmConfigFromFlags(flags DriverOptions) {
+	d.SwarmMaster = flags.Bool("swarm-master")
+	d.SwarmHost = flags.String("swarm-host")
+	d.SwarmDiscovery = flags.String("swarm-discovery")
+}
+
+func EngineInstallURLFlagSet(flags DriverOptions) bool {
+	engineInstallURLFlag := flags.String("engine-install-url")
+	return engineInstallURLFlag != DefaultEngineInstallURL && engineInstallURLFlag != ""
 }

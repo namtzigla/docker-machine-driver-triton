@@ -12,10 +12,31 @@ import (
 	"github.com/docker/machine/libmachine/swarm"
 )
 
-var provisioners = make(map[string]*RegisteredProvisioner)
+var (
+	provisioners          = make(map[string]*RegisteredProvisioner)
+	detector     Detector = &StandardDetector{}
+)
 
-// Distribution specific actions
+type SSHCommander interface {
+	// Short-hand for accessing an SSH command from the driver.
+	SSHCommand(args string) (string, error)
+}
+
+type Detector interface {
+	DetectProvisioner(d drivers.Driver) (Provisioner, error)
+}
+
+type StandardDetector struct{}
+
+func SetDetector(newDetector Detector) {
+	detector = newDetector
+}
+
+// Provisioner defines distribution specific actions
 type Provisioner interface {
+	fmt.Stringer
+	SSHCommander
+
 	// Create the files for the daemon to consume configuration settings (return struct of content and path)
 	GenerateDockerOptions(dockerPort int) (*DockerOptions, error)
 
@@ -23,7 +44,7 @@ type Provisioner interface {
 	GetDockerOptionsDir() string
 
 	// Return the auth options used to configure remote connection for the daemon.
-	GetAuthOptions() auth.AuthOptions
+	GetAuthOptions() auth.Options
 
 	// Run a package action e.g. install
 	Package(name string, action pkgaction.PackageAction) error
@@ -43,16 +64,13 @@ type Provisioner interface {
 	//     3. Configure the daemon to accept connections over TLS.
 	//     4. Copy the needed certificates to the server and local config dir.
 	//     5. Configure / activate swarm if applicable.
-	Provision(swarmOptions swarm.SwarmOptions, authOptions auth.AuthOptions, engineOptions engine.EngineOptions) error
+	Provision(swarmOptions swarm.Options, authOptions auth.Options, engineOptions engine.Options) error
 
 	// Perform action on a named service e.g. stop
 	Service(name string, action serviceaction.ServiceAction) error
 
 	// Get the driver which is contained in the provisioner.
 	GetDriver() drivers.Driver
-
-	// Short-hand for accessing an SSH command from the driver.
-	SSHCommand(args string) (string, error)
 
 	// Set the OS Release info depending on how it's represented
 	// internally
@@ -62,7 +80,7 @@ type Provisioner interface {
 	GetOsReleaseInfo() (*OsRelease, error)
 }
 
-// Detection
+// RegisteredProvisioner creates a new provisioner
 type RegisteredProvisioner struct {
 	New func(d drivers.Driver) Provisioner
 }
@@ -72,6 +90,17 @@ func Register(name string, p *RegisteredProvisioner) {
 }
 
 func DetectProvisioner(d drivers.Driver) (Provisioner, error) {
+	return detector.DetectProvisioner(d)
+}
+
+func (detector StandardDetector) DetectProvisioner(d drivers.Driver) (Provisioner, error) {
+	log.Info("Waiting for SSH to be available...")
+	if err := drivers.WaitForSSH(d); err != nil {
+		return nil, err
+	}
+
+	log.Info("Detecting the provisioner...")
+
 	osReleaseOut, err := drivers.RunSSHCommandFromDriver(d, "cat /etc/os-release")
 	if err != nil {
 		return nil, fmt.Errorf("Error getting SSH command: %s", err)
@@ -87,7 +116,7 @@ func DetectProvisioner(d drivers.Driver) (Provisioner, error) {
 		provisioner.SetOsReleaseInfo(osReleaseInfo)
 
 		if provisioner.CompatibleWithHost() {
-			log.Debugf("found compatible host: %s", osReleaseInfo.Id)
+			log.Debugf("found compatible host: %s", osReleaseInfo.ID)
 			return provisioner, nil
 		}
 	}

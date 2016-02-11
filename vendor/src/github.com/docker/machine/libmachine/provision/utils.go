@@ -13,6 +13,7 @@ import (
 
 	"github.com/docker/machine/libmachine/auth"
 	"github.com/docker/machine/libmachine/cert"
+	"github.com/docker/machine/libmachine/engine"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/provision/serviceaction"
@@ -42,7 +43,7 @@ func makeDockerOptionsDir(p Provisioner) error {
 	return nil
 }
 
-func setRemoteAuthOptions(p Provisioner) auth.AuthOptions {
+func setRemoteAuthOptions(p Provisioner) auth.Options {
 	dockerDir := p.GetDockerOptionsDir()
 	authOptions := p.GetAuthOptions()
 
@@ -85,17 +86,20 @@ func ConfigureAuth(p Provisioner) error {
 		return fmt.Errorf("Copying key.pem to machine dir failed: %s", err)
 	}
 
-	log.Debugf("generating server cert: %s ca-key=%s private-key=%s org=%s",
+	// The Host IP is always added to the certificate's SANs list
+	hosts := append(authOptions.ServerCertSANs, ip, "localhost")
+	log.Debugf("generating server cert: %s ca-key=%s private-key=%s org=%s san=%s",
 		authOptions.ServerCertPath,
 		authOptions.CaCertPath,
 		authOptions.CaPrivateKeyPath,
 		org,
+		hosts,
 	)
 
 	// TODO: Switch to passing just authOptions to this func
 	// instead of all these individual fields
 	err = cert.GenerateCert(
-		[]string{ip, "localhost"},
+		hosts,
 		authOptions.ServerCertPath,
 		authOptions.ServerKeyPath,
 		authOptions.CaCertPath,
@@ -109,6 +113,10 @@ func ConfigureAuth(p Provisioner) error {
 	}
 
 	if err := p.Service("docker", serviceaction.Stop); err != nil {
+		return err
+	}
+
+	if _, err := p.SSHCommand(`if [ ! -z "$(ip link show docker0)" ]; then sudo ip link delete docker0; fi`); err != nil {
 		return err
 	}
 
@@ -146,15 +154,15 @@ func ConfigureAuth(p Provisioner) error {
 		return err
 	}
 
-	dockerUrl, err := driver.GetURL()
+	dockerURL, err := driver.GetURL()
 	if err != nil {
 		return err
 	}
-	u, err := url.Parse(dockerUrl)
+	u, err := url.Parse(dockerURL)
 	if err != nil {
 		return err
 	}
-	dockerPort := 2376
+	dockerPort := engine.DefaultPort
 	parts := strings.Split(u.Host, ":")
 	if len(parts) == 2 {
 		dPort, err := strconv.Atoi(parts[1])
@@ -179,7 +187,7 @@ func ConfigureAuth(p Provisioner) error {
 		return err
 	}
 
-	return waitForDocker(p, dockerPort)
+	return WaitForDocker(p, dockerPort)
 }
 
 func matchNetstatOut(reDaemonListening, netstatOut string) bool {
@@ -201,11 +209,51 @@ func matchNetstatOut(reDaemonListening, netstatOut string) bool {
 	return false
 }
 
+func decideStorageDriver(p Provisioner, defaultDriver, suppliedDriver string) (string, error) {
+	if suppliedDriver != "" {
+		return suppliedDriver, nil
+	}
+	bestSuitedDriver := ""
+
+	defer func() {
+		if bestSuitedDriver != "" {
+			log.Debugf("No storagedriver specified, using %s\n", bestSuitedDriver)
+		}
+	}()
+
+	if defaultDriver != "aufs" {
+		bestSuitedDriver = defaultDriver
+	} else {
+		remoteFilesystemType, err := getFilesystemType(p, "/var/lib")
+		if err != nil {
+			return "", err
+		}
+		if remoteFilesystemType == "btrfs" {
+			bestSuitedDriver = "btrfs"
+		} else {
+			bestSuitedDriver = "aufs"
+		}
+	}
+	return bestSuitedDriver, nil
+
+}
+
+func getFilesystemType(p Provisioner, directory string) (string, error) {
+	statCommandOutput, err := p.SSHCommand("stat -f -c %T " + directory)
+	if err != nil {
+		err = fmt.Errorf("Error looking up filesystem type: %s", err)
+		return "", err
+	}
+
+	fstype := strings.TrimSpace(statCommandOutput)
+	return fstype, nil
+}
+
 func checkDaemonUp(p Provisioner, dockerPort int) func() bool {
 	reDaemonListening := fmt.Sprintf(":%d.*LISTEN", dockerPort)
 	return func() bool {
 		// HACK: Check netstat's output to see if anyone's listening on the Docker API port.
-		netstatOut, err := p.SSHCommand("netstat -a")
+		netstatOut, err := p.SSHCommand("netstat -an")
 		if err != nil {
 			log.Warnf("Error running SSH command: %s", err)
 			return false
@@ -215,8 +263,8 @@ func checkDaemonUp(p Provisioner, dockerPort int) func() bool {
 	}
 }
 
-func waitForDocker(p Provisioner, dockerPort int) error {
-	if err := mcnutils.WaitForSpecific(checkDaemonUp(p, dockerPort), 5, 3*time.Second); err != nil {
+func WaitForDocker(p Provisioner, dockerPort int) error {
+	if err := mcnutils.WaitForSpecific(checkDaemonUp(p, dockerPort), 10, 3*time.Second); err != nil {
 		return NewErrDaemonAvailable(err)
 	}
 

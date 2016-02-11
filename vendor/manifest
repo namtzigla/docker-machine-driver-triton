@@ -11,49 +11,49 @@
 		{
 			"importpath": "github.com/docker/machine/commands/mcndirs",
 			"repository": "https://github.com/docker/machine",
-			"revision": "a1e610bdd31c307a06a46d7ff6abf2c4b37ade34",
-			"branch": "HEAD",
+			"revision": "4262a8fde50c8804236a8f972a965cee15784107",
+			"branch": "master",
 			"path": "/commands/mcndirs"
 		},
 		{
 			"importpath": "github.com/docker/machine/drivers/none",
 			"repository": "https://github.com/docker/machine",
-			"revision": "e421a07336c65fe28177b8a6a2c979c2f66f4d8c",
+			"revision": "4262a8fde50c8804236a8f972a965cee15784107",
 			"branch": "master",
 			"path": "/drivers/none"
 		},
 		{
 			"importpath": "github.com/docker/machine/libmachine",
 			"repository": "https://github.com/docker/machine",
-			"revision": "e421a07336c65fe28177b8a6a2c979c2f66f4d8c",
+			"revision": "4262a8fde50c8804236a8f972a965cee15784107",
 			"branch": "master",
 			"path": "/libmachine"
 		},
 		{
 			"importpath": "github.com/docker/machine/libmachine/drivers",
 			"repository": "https://github.com/docker/machine",
-			"revision": "a1e610bdd31c307a06a46d7ff6abf2c4b37ade34",
-			"branch": "HEAD",
+			"revision": "4262a8fde50c8804236a8f972a965cee15784107",
+			"branch": "master",
 			"path": "/libmachine/drivers"
 		},
 		{
 			"importpath": "github.com/docker/machine/libmachine/log",
 			"repository": "https://github.com/docker/machine",
-			"revision": "e421a07336c65fe28177b8a6a2c979c2f66f4d8c",
+			"revision": "4262a8fde50c8804236a8f972a965cee15784107",
 			"branch": "master",
 			"path": "/libmachine/log"
 		},
 		{
 			"importpath": "github.com/docker/machine/libmachine/mcnflag",
 			"repository": "https://github.com/docker/machine",
-			"revision": "a1e610bdd31c307a06a46d7ff6abf2c4b37ade34",
-			"branch": "HEAD",
+			"revision": "4262a8fde50c8804236a8f972a965cee15784107",
+			"branch": "master",
 			"path": "/libmachine/mcnflag"
 		},
 		{
 			"importpath": "github.com/docker/machine/libmachine/mcnutils",
 			"repository": "https://github.com/docker/machine",
-			"revision": "e421a07336c65fe28177b8a6a2c979c2f66f4d8c",
+			"revision": "4262a8fde50c8804236a8f972a965cee15784107",
 			"branch": "master",
 			"path": "/libmachine/mcnutils"
 		},

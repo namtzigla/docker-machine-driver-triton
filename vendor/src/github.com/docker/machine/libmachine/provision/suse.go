@@ -30,9 +30,10 @@ func init() {
 func NewOpenSUSEProvisioner(d drivers.Driver) Provisioner {
 	return &SUSEProvisioner{
 		GenericProvisioner{
+			SSHCommander:      GenericSSHCommander{Driver: d},
 			DockerOptionsDir:  "/etc/docker",
 			DaemonOptionsFile: "/etc/sysconfig/docker",
-			OsReleaseId:       "opensuse",
+			OsReleaseID:       "opensuse",
 			Packages: []string{
 				"curl",
 			},
@@ -44,9 +45,10 @@ func NewOpenSUSEProvisioner(d drivers.Driver) Provisioner {
 func NewSLEDProvisioner(d drivers.Driver) Provisioner {
 	return &SUSEProvisioner{
 		GenericProvisioner{
+			SSHCommander:      GenericSSHCommander{Driver: d},
 			DockerOptionsDir:  "/etc/docker",
 			DaemonOptionsFile: "/etc/sysconfig/docker",
-			OsReleaseId:       "sled",
+			OsReleaseID:       "sled",
 			Packages: []string{
 				"curl",
 			},
@@ -58,9 +60,10 @@ func NewSLEDProvisioner(d drivers.Driver) Provisioner {
 func NewSLESProvisioner(d drivers.Driver) Provisioner {
 	return &SUSEProvisioner{
 		GenericProvisioner{
+			SSHCommander:      GenericSSHCommander{Driver: d},
 			DockerOptionsDir:  "/etc/docker",
 			DaemonOptionsFile: "/etc/sysconfig/docker",
-			OsReleaseId:       "sles",
+			OsReleaseID:       "sles",
 			Packages: []string{
 				"curl",
 			},
@@ -71,6 +74,10 @@ func NewSLESProvisioner(d drivers.Driver) Provisioner {
 
 type SUSEProvisioner struct {
 	GenericProvisioner
+}
+
+func (provisioner *SUSEProvisioner) String() string {
+	return "suse"
 }
 
 func (provisioner *SUSEProvisioner) Service(name string, action serviceaction.ServiceAction) error {
@@ -120,8 +127,11 @@ func (provisioner *SUSEProvisioner) Package(name string, action pkgaction.Packag
 }
 
 func (provisioner *SUSEProvisioner) dockerDaemonResponding() bool {
-	if _, err := provisioner.SSHCommand("sudo docker version"); err != nil {
+	log.Debug("checking docker daemon")
+
+	if out, err := provisioner.SSHCommand("sudo docker version"); err != nil {
 		log.Warnf("Error getting SSH command to check if the daemon is up: %s", err)
+		log.Debugf("'sudo docker version' output:\n%s", out)
 		return false
 	}
 
@@ -129,10 +139,11 @@ func (provisioner *SUSEProvisioner) dockerDaemonResponding() bool {
 	return true
 }
 
-func (provisioner *SUSEProvisioner) Provision(swarmOptions swarm.SwarmOptions, authOptions auth.AuthOptions, engineOptions engine.EngineOptions) error {
+func (provisioner *SUSEProvisioner) Provision(swarmOptions swarm.Options, authOptions auth.Options, engineOptions engine.Options) error {
 	provisioner.SwarmOptions = swarmOptions
 	provisioner.AuthOptions = authOptions
 	provisioner.EngineOptions = engineOptions
+	swarmOptions.Env = engineOptions.Env
 
 	if err := provisioner.SetHostname(provisioner.Driver.GetMachineName()); err != nil {
 		return err

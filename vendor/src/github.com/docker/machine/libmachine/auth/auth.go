@@ -1,6 +1,6 @@
 package auth
 
-type AuthOptions struct {
+type Options struct {
 	CertDir              string
 	CaCertPath           string
 	CaPrivateKeyPath     string
@@ -11,7 +11,7 @@ type AuthOptions struct {
 	ServerCertRemotePath string
 	ServerKeyRemotePath  string
 	ClientCertPath       string
-
+	ServerCertSANs       []string
 	// StorePath is left in for historical reasons, but not really meant to
 	// be used directly.
 	StorePath string

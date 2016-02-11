@@ -10,7 +10,6 @@ import (
 	"github.com/docker/machine/libmachine/engine"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/provision/pkgaction"
-	"github.com/docker/machine/libmachine/provision/serviceaction"
 	"github.com/docker/machine/libmachine/swarm"
 )
 
@@ -31,39 +30,16 @@ func init() {
 
 func NewCoreOSProvisioner(d drivers.Driver) Provisioner {
 	return &CoreOSProvisioner{
-		GenericProvisioner{
-			DockerOptionsDir:  "/etc/docker",
-			DaemonOptionsFile: "/etc/systemd/system/docker.service",
-			OsReleaseId:       "coreos",
-			Driver:            d,
-		},
+		NewSystemdProvisioner("coreos", d),
 	}
 }
 
 type CoreOSProvisioner struct {
-	GenericProvisioner
+	SystemdProvisioner
 }
 
-func (provisioner *CoreOSProvisioner) Service(name string, action serviceaction.ServiceAction) error {
-	// daemon-reload to catch config updates; systemd -- ugh
-	if _, err := provisioner.SSHCommand("sudo systemctl daemon-reload"); err != nil {
-		return err
-	}
-
-	command := fmt.Sprintf("sudo systemctl %s %s", action.String(), name)
-
-	if _, err := provisioner.SSHCommand(command); err != nil {
-		return err
-	}
-
-	// wait until docker is running
-	if (name == "docker") && (action.String() == "start") {
-		if err := waitForDocker(provisioner, 2376); err != nil {
-			return err
-		}
-	}
-
-	return nil
+func (provisioner *CoreOSProvisioner) String() string {
+	return "coreOS"
 }
 
 func (provisioner *CoreOSProvisioner) SetHostname(hostname string) error {
@@ -99,7 +75,7 @@ EnvironmentFile=-/run/flannel_docker_opts.env
 MountFlags=slave
 LimitNOFILE=1048576
 LimitNPROC=1048576
-ExecStart=/usr/lib/coreos/dockerd --daemon --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:{{.DockerPort}} --tlsverify --tlscacert {{.AuthOptions.CaCertRemotePath}} --tlscert {{.AuthOptions.ServerCertRemotePath}} --tlskey {{.AuthOptions.ServerKeyRemotePath}}{{ range .EngineOptions.Labels }} --label {{.}}{{ end }}{{ range .EngineOptions.InsecureRegistry }} --insecure-registry {{.}}{{ end }}{{ range .EngineOptions.RegistryMirror }} --registry-mirror {{.}}{{ end }}{{ range .EngineOptions.ArbitraryFlags }} --{{.}}{{ end }} \$DOCKER_OPTS \$DOCKER_OPT_BIP \$DOCKER_OPT_MTU \$DOCKER_OPT_IPMASQ
+ExecStart=/usr/lib/coreos/dockerd daemon --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:{{.DockerPort}} --tlsverify --tlscacert {{.AuthOptions.CaCertRemotePath}} --tlscert {{.AuthOptions.ServerCertRemotePath}} --tlskey {{.AuthOptions.ServerKeyRemotePath}}{{ range .EngineOptions.Labels }} --label {{.}}{{ end }}{{ range .EngineOptions.InsecureRegistry }} --insecure-registry {{.}}{{ end }}{{ range .EngineOptions.RegistryMirror }} --registry-mirror {{.}}{{ end }}{{ range .EngineOptions.ArbitraryFlags }} --{{.}}{{ end }} \$DOCKER_OPTS \$DOCKER_OPT_BIP \$DOCKER_OPT_MTU \$DOCKER_OPT_IPMASQ
 
 [Install]
 WantedBy=multi-user.target
@@ -128,7 +104,7 @@ func (provisioner *CoreOSProvisioner) Package(name string, action pkgaction.Pack
 	return nil
 }
 
-func (provisioner *CoreOSProvisioner) Provision(swarmOptions swarm.SwarmOptions, authOptions auth.AuthOptions, engineOptions engine.EngineOptions) error {
+func (provisioner *CoreOSProvisioner) Provision(swarmOptions swarm.Options, authOptions auth.Options, engineOptions engine.Options) error {
 	provisioner.SwarmOptions = swarmOptions
 	provisioner.AuthOptions = authOptions
 	provisioner.EngineOptions = engineOptions
@@ -146,6 +122,11 @@ func (provisioner *CoreOSProvisioner) Provision(swarmOptions swarm.SwarmOptions,
 
 	log.Debugf("Setting up certificates")
 	if err := ConfigureAuth(provisioner); err != nil {
+		return err
+	}
+
+	log.Debug("Configuring swarm")
+	if err := configureSwarm(provisioner, swarmOptions, provisioner.AuthOptions); err != nil {
 		return err
 	}
 
