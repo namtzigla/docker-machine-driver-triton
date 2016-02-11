@@ -8,4 +8,4 @@ install:
     - go get github.com/constabulary/gb/...
 
 script:
-    - ./bin/gb test
+    - gb test
