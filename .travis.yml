@@ -5,8 +5,7 @@ go:
   - 1.5
 
 install:
-    - export GOPATH="$PWD/src:$PWD/vendor"
-    - cd src
+    - go get github.com/constabulary/gb/...
 
 script:
-    - go build -v ./...
+    - ./bin/gb test
