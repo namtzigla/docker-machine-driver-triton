@@ -7,4 +7,5 @@ install:
     - go get github.com/constabulary/gb/...
 
 script:
+    - gb vendor fetch
     - gb test
