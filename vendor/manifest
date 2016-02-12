@@ -2,6 +2,13 @@
 	"version": 0,
 	"dependencies": [
 		{
+			"importpath": "github.com/davecgh/go-spew/spew",
+			"repository": "https://github.com/davecgh/go-spew",
+			"revision": "5215b55f46b2b919f50a1df0eaa5886afe4e3b3d",
+			"branch": "master",
+			"path": "/spew"
+		},
+		{
 			"importpath": "github.com/docker/docker/pkg/term",
 			"repository": "https://github.com/docker/docker",
 			"revision": "80439a4ce280777ded1b22842b7b6b3d4d6b574a",
@@ -56,6 +63,26 @@
 			"revision": "4262a8fde50c8804236a8f972a965cee15784107",
 			"branch": "master",
 			"path": "/libmachine/mcnutils"
+		},
+		{
+			"importpath": "github.com/pmezard/go-difflib/difflib",
+			"repository": "https://github.com/pmezard/go-difflib",
+			"revision": "792786c7400a136282c1664665ae0a8db921c6c2",
+			"branch": "master",
+			"path": "/difflib"
+		},
+		{
+			"importpath": "github.com/stretchr/testify/assert",
+			"repository": "https://github.com/stretchr/testify",
+			"revision": "9f9027faeb0dad515336ed2f28317f9f8f527ab4",
+			"branch": "master",
+			"path": "/assert"
+		},
+		{
+			"importpath": "github.com/yosida95/golang-sshkey",
+			"repository": "https://github.com/yosida95/golang-sshkey",
+			"revision": "1e497acafe16243bea59c389fb95379d01cfb15c",
+			"branch": "master"
 		},
 		{
 			"importpath": "golang.org/x/crypto/curve25519",
