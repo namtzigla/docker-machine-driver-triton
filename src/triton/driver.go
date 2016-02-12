@@ -460,25 +460,11 @@ func (d *Driver) RegisterWithSdcCloudApi() error {
 		return err
 	}
 
-	//ssh-keygen -l -f "$sshPubKeyPath" | awk '{print $2}' | tr -d '\n';
-	cmd = []string{"ssh-keygen", "-E", "md5", "-l", "-f", d.PrivateKey + ".pub"}
-	stdout, _, err = RunCommand(cmd, "")
+	sshKeyId, err := GetSshKeyId(d.PrivateKey + ".pub")
 	if err != nil {
-		log.Debugf("command %s failed %s", cmd, err)
+		log.Debugf("Error in getting key fingerprint, %+v\n", err)
 		return err
 	}
-	sshKeyIdSplit := strings.SplitN(stdout, " ", 3)
-	if len(sshKeyIdSplit) < 2 {
-		log.Debugf("invalid ssh key id, length is %d", len(sshKeyIdSplit))
-		return err
-	}
-	sshKeyId := sshKeyIdSplit[1]
-
-	sshKeyIdSplit = strings.SplitN(sshKeyId, ":", 2)
-	if sshKeyIdSplit[0] != "MD5" {
-		return fmt.Errorf("invalid ssh key output: %s", sshKeyId)
-	}
-	sshKeyId = sshKeyIdSplit[1]
 
 	// Register this user/key with the SDC cloud API.
 	err = d.MakeCloudApiRequest(now, encDateString, sshKeyId)
