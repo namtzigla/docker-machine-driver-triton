@@ -14,3 +14,12 @@
 	gb build 
 ```
  As result in your project `$PWD/bin` you will find a binary that needs to be copyed somehere in the `$PATH` so `docker-machine` will find it 
+
+
+## License
+ TBDL
+
+## Authors
+
+ * (@tianon)
+ * Florin Stan (@namtzigla)
