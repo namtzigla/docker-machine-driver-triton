@@ -8,4 +8,4 @@ install:
 
 script:
     - gb vendor restore
-    - gb test
+    - gb test -v
