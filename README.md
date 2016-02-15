@@ -21,5 +21,5 @@
 
 ## Authors
 
- * (@tianon)
- * Florin Stan (@namtzigla)
+ * @tianon
+ * Florin Stan [@namtzigla](https://github.com/namtzigla)
