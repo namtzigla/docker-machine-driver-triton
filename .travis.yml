@@ -5,8 +5,8 @@ install:
 - go get github.com/constabulary/gb/...
 script:
 - gb vendor restore
+- gb build -ldflags "-X main.GitCommit=`git rev-parse HEAD`"
 - gb test -v
-- gb build 
 deploy:
   provider: releases
   api_key:
