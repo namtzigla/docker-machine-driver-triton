@@ -2,6 +2,30 @@
 	"version": 0,
 	"dependencies": [
 		{
+			"importpath": "github.com/bugsnag/bugsnag-go",
+			"repository": "https://github.com/bugsnag/bugsnag-go",
+			"revision": "02e952891c52fbcb15f113d90633897355783b6e",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/bugsnag/osext",
+			"repository": "https://github.com/bugsnag/osext",
+			"revision": "0dd3f918b21bec95ace9dc86c7e70266cfc5c702",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/bugsnag/panicwrap",
+			"repository": "https://github.com/bugsnag/panicwrap",
+			"revision": "aceac81c6e2f55f23844821679a0553b545e91df",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/codegangsta/cli",
+			"repository": "https://github.com/codegangsta/cli",
+			"revision": "0ab42fd482c27cf2c95e7794ad3bb2082c2ab2d7",
+			"branch": "master"
+		},
+		{
 			"importpath": "github.com/davecgh/go-spew/spew",
 			"repository": "https://github.com/davecgh/go-spew",
 			"revision": "5215b55f46b2b919f50a1df0eaa5886afe4e3b3d",
@@ -16,11 +40,31 @@
 			"path": "/pkg/term"
 		},
 		{
+			"importpath": "github.com/docker/go-units",
+			"repository": "https://github.com/docker/go-units",
+			"revision": "5d2041e26a699eaca682e2ea41c8f891e1060444",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/docker/machine/commands",
+			"repository": "https://github.com/docker/machine",
+			"revision": "1eaf5a464f44066e57628218995c8b7d80c825cd",
+			"branch": "master",
+			"path": "/commands"
+		},
+		{
 			"importpath": "github.com/docker/machine/commands/mcndirs",
 			"repository": "https://github.com/docker/machine",
 			"revision": "4262a8fde50c8804236a8f972a965cee15784107",
 			"branch": "master",
 			"path": "/commands/mcndirs"
+		},
+		{
+			"importpath": "github.com/docker/machine/drivers/errdriver",
+			"repository": "https://github.com/docker/machine",
+			"revision": "1eaf5a464f44066e57628218995c8b7d80c825cd",
+			"branch": "master",
+			"path": "/drivers/errdriver"
 		},
 		{
 			"importpath": "github.com/docker/machine/drivers/none",
@@ -65,11 +109,30 @@
 			"path": "/libmachine/mcnutils"
 		},
 		{
+			"importpath": "github.com/docker/machine/version",
+			"repository": "https://github.com/docker/machine",
+			"revision": "1eaf5a464f44066e57628218995c8b7d80c825cd",
+			"branch": "master",
+			"path": "/version"
+		},
+		{
 			"importpath": "github.com/pmezard/go-difflib/difflib",
 			"repository": "https://github.com/pmezard/go-difflib",
 			"revision": "792786c7400a136282c1664665ae0a8db921c6c2",
 			"branch": "master",
 			"path": "/difflib"
+		},
+		{
+			"importpath": "github.com/samalba/dockerclient",
+			"repository": "https://github.com/samalba/dockerclient",
+			"revision": "4278ba330b9475a8fa85520226479697f6c84482",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/skarademir/naturalsort",
+			"repository": "https://github.com/skarademir/naturalsort",
+			"revision": "69a5d87bef620f77ee8508db30c846b3b84b111e",
+			"branch": "master"
 		},
 		{
 			"importpath": "github.com/stretchr/testify/assert",

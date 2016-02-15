@@ -445,20 +445,12 @@ func (d *Driver) RegisterWithSdcCloudApi() error {
 	// now=$(date -u "+%a, %d %h %Y %H:%M:%S GMT")
 	now := time.Now().UTC().Format(time.RFC1123)
 
-	// signature=$(echo -n ${now} | openssl dgst -sha256 -sign $sshPrivKeyPath | openssl enc -e -a | tr -d '\n')
-	cmd := []string{"openssl", "dgst", "-sha256", "-sign", d.PrivateKey}
-	stdout, _, err := RunCommand(cmd, now)
+	signer, err := LoadPrivateKey(d.PrivateKey, "")
 	if err != nil {
-		log.Debugf("command %s failed %s", cmd, err)
+		log.Debugf("error loading the private key! %+v\n", err)
 		return err
 	}
-
-	cmd = []string{"openssl", "enc", "-e", "-a"}
-	encDateString, _, err := RunCommand(cmd, stdout)
-	if err != nil {
-		log.Debugf("command %s failed %s", cmd, err)
-		return err
-	}
+	encDateString, err := signer.SignToString([]byte(now))
 
 	sshKeyId, err := GetSshKeyId(d.PrivateKey + ".pub")
 	if err != nil {
