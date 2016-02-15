@@ -1,3 +1,7 @@
 package main
 
-const Version = "1.0"
+var (
+	Version = "1.0"
+
+	GitCommit = "HEAD"
+)
