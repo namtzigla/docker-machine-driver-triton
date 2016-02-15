@@ -1,11 +1,17 @@
 language: go
-
 go:
-  - 1.5
-
+- 1.5
 install:
-    - go get github.com/constabulary/gb/...
-
+- go get github.com/constabulary/gb/...
 script:
-    - gb vendor restore
-    - gb test -v
+- gb vendor restore
+- gb test -v
+- gb build 
+deploy:
+  provider: releases
+  api_key:
+    secure: CgcO6jUPjCmXypuA/5Fdeu62YIcPyIUjr/XnlVtAZX6F/IvoFqJrrRNT44OjESeJWsx6u6Cq5EjV07y9NEDLw4SWLXVgcUDn1qazzrhEWrelCLDscwALBUM9MScQJkiXYwofaYeXsLZwqZ54ZZ28RFlExMWQrHaAQVx1Q4EU4lUUdZj5NkiWrq8M9XlzmgqszW4H0COXAkHfIUK4i90wR6OmMKH75xxOZ+Ab8Jrbsn/8rVf9NbZe35gCzrFepORq/Nix+8lqKdv+7uJVpbIUgo6t3x12x+R/D32lWreZydlkFcU5QCxTv8mfp9slxkRoiIiQAyJLklN7OjilCu/gFL9Z1gj0o6384cCKPAFf27w2Q10CREzqF1DXr5k/VkD84W+Lm8uKLsCxoOfpeaWiF40LyBqvpJNZI2xtyyymmcQXx7NM4dzYAcCv7X7eyWwZiAjcMVyXFRvBcw0k1nu1dXlkig9WWErl25w6eF15yXW3qP+RFKA3QtujGPL5uyI68g7DkkmacrKLLITule4Vskm/rcRDGW6HizfZXSF1GUHUd+D15iMLPVM/kwTHZ062e5tkUjT3/I7b3dtgrrX4iStrmOCKSeyup9B+1kvVJfBN8NxjKtPhgFERr1qUWcmuN7o+ScI+dLRwU/9igDhgfH6F0WA/DVMG6c02ot5dexA=
+  file: 'bin/docker-machine-driver-triton'
+  on:
+    tags: true
+    repo: namtzigla/docker-machine-driver-triton
